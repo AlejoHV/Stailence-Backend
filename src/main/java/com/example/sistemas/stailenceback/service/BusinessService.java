@@ -1,0 +1,19 @@
+package com.example.sistemas.stailenceback.service;
+
+import com.example.sistemas.stailenceback.dto.request.CreateBusinessRequest;
+import com.example.sistemas.stailenceback.dto.response.BusinessDetailResponse;
+import com.example.sistemas.stailenceback.dto.response.BusinessResponse;
+import com.example.sistemas.stailenceback.dto.response.AppointmentResponse;
+import com.example.sistemas.stailenceback.dto.response.UserResponse;
+
+import java.util.List;
+
+public interface BusinessService {
+    BusinessResponse getProfile(Long negocioId);
+    BusinessResponse updateProfile(Long negocioId, CreateBusinessRequest req);
+
+    List<UserResponse> listEmployees(Long negocioId);
+    UserResponse createEmployee(Long negocioId, UserResponse req);
+    List<AppointmentResponse> listAppointments(Long negocioId);
+    BusinessDetailResponse getDetail(Long negocioId);
+}
