@@ -23,7 +23,7 @@ public class RolesUsuarioNegocio {
     @JoinColumn(name = "usuario_id", nullable = false)
     private Usuario usuario;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "rol", nullable = false)
-    private String rol;
+    private MembershipRole rol;
 }
-

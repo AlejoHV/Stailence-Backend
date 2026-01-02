@@ -17,7 +17,7 @@ public class CreateBusinessRequest {
 
     private String nombreLegal;
 
-    @NotBlank
+    // slug opcional: si no se provee, el servicio lo genera
     private String slug;
 
     @Email
@@ -28,4 +28,3 @@ public class CreateBusinessRequest {
 
     private String direccion;
 }
-

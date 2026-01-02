@@ -6,7 +6,6 @@ import com.example.sistemas.stailenceback.dto.response.BusinessResponse;
 import com.example.sistemas.stailenceback.dto.response.ServiceResponse;
 import com.example.sistemas.stailenceback.service.AppointmentService;
 import com.example.sistemas.stailenceback.service.BusinessService;
-import com.example.sistemas.stailenceback.service.impl.AppointmentServiceImpl;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
@@ -29,15 +28,14 @@ public class ClientController {
     @Operation(summary = "Listar negocios (básico)")
     @GetMapping("/businesses")
     public ResponseEntity<List<BusinessResponse>> getBusinesses() {
-        // Para demo, devolver vacío — se puede implementar búsqueda real
-        return ResponseEntity.ok(List.of());
+        return ResponseEntity.ok(businessService.listAllBusinesses());
     }
 
     @Operation(summary = "Listar servicios de un negocio")
     @GetMapping("/services/{businessId}")
     public ResponseEntity<List<ServiceResponse>> getServices(@PathVariable Long businessId) {
-        // Para demo, devolver vacío — servicio real puede consultar repositorio
-        return ResponseEntity.ok(List.of());
+        var detail = businessService.getDetail(businessId);
+        return ResponseEntity.ok(detail.getServicios());
     }
 
     @Operation(summary = "Crear cita")
@@ -52,4 +50,3 @@ public class ClientController {
         return ResponseEntity.ok(appointmentService.getAppointmentsByClient(clienteId));
     }
 }
-

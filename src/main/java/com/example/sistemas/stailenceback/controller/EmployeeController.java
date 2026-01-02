@@ -3,9 +3,11 @@ package com.example.sistemas.stailenceback.controller;
 import com.example.sistemas.stailenceback.dto.response.AppointmentResponse;
 import com.example.sistemas.stailenceback.service.AppointmentService;
 import io.swagger.v3.oas.annotations.Operation;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @RestController
@@ -20,9 +22,8 @@ public class EmployeeController {
 
     @Operation(summary = "Obtener agenda")
     @GetMapping("/schedule")
-    public ResponseEntity<List<AppointmentResponse>> schedule(@RequestParam Long empleadoId, @RequestParam String fecha) {
-        // Implementación básica pendiente
-        return ResponseEntity.ok(List.of());
+    public ResponseEntity<List<AppointmentResponse>> schedule(@RequestParam Long empleadoId, @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fecha) {
+        return ResponseEntity.ok(appointmentService.getAppointmentsByEmployeeAndDate(empleadoId, fecha));
     }
 
     @Operation(summary = "Actualizar disponibilidad")
@@ -35,7 +36,6 @@ public class EmployeeController {
     @Operation(summary = "Citas del día")
     @GetMapping("/today-appointments")
     public ResponseEntity<List<AppointmentResponse>> todayAppointments(@RequestParam Long empleadoId) {
-        return ResponseEntity.ok(List.of());
+        return ResponseEntity.ok(appointmentService.getAppointmentsByEmployeeAndDate(empleadoId, LocalDate.now()));
     }
 }
-

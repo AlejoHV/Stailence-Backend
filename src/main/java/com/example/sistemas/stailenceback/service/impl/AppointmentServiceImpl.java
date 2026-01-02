@@ -12,6 +12,7 @@ import com.example.sistemas.stailenceback.repository.CitaRepository;
 import com.example.sistemas.stailenceback.repository.NegocioRepository;
 import com.example.sistemas.stailenceback.repository.ServicioRepository;
 import com.example.sistemas.stailenceback.repository.UsuarioRepository;
+import com.example.sistemas.stailenceback.repository.RolesUsuarioNegocioRepository;
 import com.example.sistemas.stailenceback.service.AppointmentService;
 import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Service;
@@ -29,13 +30,15 @@ public class AppointmentServiceImpl implements AppointmentService {
     private final NegocioRepository negocioRepository;
     private final ServicioRepository servicioRepository;
     private final UsuarioRepository usuarioRepository;
+    private final RolesUsuarioNegocioRepository rolesUsuarioNegocioRepository;
     private final ModelMapper modelMapper;
 
-    public AppointmentServiceImpl(CitaRepository citaRepository, NegocioRepository negocioRepository, ServicioRepository servicioRepository, UsuarioRepository usuarioRepository, ModelMapper modelMapper) {
+    public AppointmentServiceImpl(CitaRepository citaRepository, NegocioRepository negocioRepository, ServicioRepository servicioRepository, UsuarioRepository usuarioRepository, RolesUsuarioNegocioRepository rolesUsuarioNegocioRepository, ModelMapper modelMapper) {
         this.citaRepository = citaRepository;
         this.negocioRepository = negocioRepository;
         this.servicioRepository = servicioRepository;
         this.usuarioRepository = usuarioRepository;
+        this.rolesUsuarioNegocioRepository = rolesUsuarioNegocioRepository;
         this.modelMapper = modelMapper;
     }
 
@@ -50,17 +53,42 @@ public class AppointmentServiceImpl implements AppointmentService {
             empleado = usuarioRepository.findById(req.getEmpleadoUsuarioId()).orElseThrow(() -> new ResourceNotFoundException("Empleado no encontrado"));
         }
 
-        // Validación simple: verificar conflictos
+        // Validaciones adicionales
+        // 1) El servicio debe pertenecer al negocio
+        if (s.getNegocio() == null || !s.getNegocio().getId().equals(n.getId())) {
+            throw new BusinessException("El servicio no pertenece al negocio especificado");
+        }
+
+        // 2) Si se provee empleado, verificar que pertenece al negocio
+        if (empleado != null) {
+            boolean pertenece = rolesUsuarioNegocioRepository.findByNegocioIdAndUsuarioId(n.getId(), empleado.getId()).isPresent();
+            if (!pertenece) {
+                throw new BusinessException("El empleado no pertenece al negocio especificado");
+            }
+        }
+
+        // 3) Validación de conflictos
         var citasHoy = citaRepository.findByNegocioIdAndFechaProgramada(n.getId(), req.getFechaProgramada());
-        // convertir hora inicio y verificar conflictos por solapamiento
         LocalTime inicio = req.getHoraInicioProgramada();
         LocalTime fin = inicio.plusMinutes(s.getDuracionMinutos());
-        boolean conflict = citasHoy.stream().anyMatch(c -> {
+
+        boolean conflictNegocio = citasHoy.stream().anyMatch(c -> {
             LocalTime cInicio = c.getHoraInicioProgramada();
             LocalTime cFin = c.getHoraFinProgramada();
             return inicio.isBefore(cFin) && fin.isAfter(cInicio);
         });
-        if (conflict) throw new BusinessException("Conflicto de horario para el negocio en esa franja");
+        if (conflictNegocio) throw new BusinessException("Conflicto de horario para el negocio en esa franja");
+
+        // 4) Si hay empleado asignado, verificar conflictos en su agenda
+        if (empleado != null) {
+            var citasEmpleado = citaRepository.findByEmpleadoUsuarioIdAndFechaProgramada(empleado.getId(), req.getFechaProgramada());
+            boolean conflictEmpleado = citasEmpleado.stream().anyMatch(c -> {
+                LocalTime cInicio = c.getHoraInicioProgramada();
+                LocalTime cFin = c.getHoraFinProgramada();
+                return inicio.isBefore(cFin) && fin.isAfter(cInicio);
+            });
+            if (conflictEmpleado) throw new BusinessException("El empleado tiene una cita en conflicto en esa franja horaria");
+        }
 
         Cita cita = Cita.builder()
                 .uuid(UUID.randomUUID().toString())
@@ -85,5 +113,12 @@ public class AppointmentServiceImpl implements AppointmentService {
                 .map(c -> modelMapper.map(c, AppointmentResponse.class))
                 .collect(Collectors.toList());
     }
-}
 
+    @Override
+    @Transactional(readOnly = true)
+    public List<AppointmentResponse> getAppointmentsByEmployeeAndDate(Long empleadoId, java.time.LocalDate fecha) {
+        return citaRepository.findByEmpleadoUsuarioIdAndFechaProgramada(empleadoId, fecha).stream()
+                .map(c -> modelMapper.map(c, AppointmentResponse.class))
+                .collect(Collectors.toList());
+    }
+}
